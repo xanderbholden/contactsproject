@@ -5,8 +5,6 @@ const getAll = async (req, res) => {
   try {
     const result = await mongodb.getDb().collection('contacts').find();
     const contacts = await result.toArray();
-
-    res.setHeader('Content-Type', 'application/json');
     res.status(200).json(contacts);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -17,13 +15,16 @@ const getSingle = async (req, res) => {
   try {
     const contactId = new ObjectId(req.params.id);
 
-    const result = await mongodb
+    const contact = await mongodb
       .getDb()
       .collection('contacts')
       .findOne({ _id: contactId });
 
-    res.setHeader('Content-Type', 'application/json');
-    res.status(200).json(result);
+    if (!contact) {
+      return res.status(404).json({ error: 'Contact not found' });
+    }
+
+    res.status(200).json(contact);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -67,7 +68,11 @@ const updateContact = async (req, res) => {
       .collection('contacts')
       .replaceOne({ _id: contactId }, contact);
 
-    res.status(204).send(response);
+    if (response.modifiedCount > 0) {
+      res.status(204).send();
+    } else {
+      res.status(404).json({ error: 'Contact not found or no changes made' });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -82,7 +87,11 @@ const deleteContact = async (req, res) => {
       .collection('contacts')
       .deleteOne({ _id: contactId });
 
-    res.status(200).json(response);
+    if (response.deletedCount > 0) {
+      res.status(200).json({ message: 'Contact deleted successfully' });
+    } else {
+      res.status(404).json({ error: 'Contact not found' });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -94,9 +103,4 @@ module.exports = {
   createContact,
   updateContact,
   deleteContact,
-};
-
-module.exports = {
-  getAll,
-  getSingle,
 };
